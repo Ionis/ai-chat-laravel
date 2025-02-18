@@ -21,6 +21,7 @@
     <h1>ChatGPT на Laravel</h1>
     <div class="messages" id="messages"></div>
     <form id="chatForm">
+        @csrf
         <div class="input-area">
             <input type="text" id="userInput" name="message" placeholder="Введите сообщение...">
             <button type="submit">Отправить</button>

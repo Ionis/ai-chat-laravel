@@ -37,6 +37,7 @@ return [
 
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
+        'proxy_url' => env('PROXY_URL'),
     ],
 
 ];

@@ -27,6 +27,7 @@ class ChatController extends Controller
 
         $client = new Client();
         $response = $client->post('https://api.openai.com/v1/chat/completions', [
+            'proxy' => config('services.openai.proxy_url'),
             'headers' => [
                 'Authorization' => "Bearer $apiKey",
                 'Content-Type' => 'application/json',

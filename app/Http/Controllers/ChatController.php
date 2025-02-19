@@ -16,7 +16,7 @@ class ChatController extends Controller
     /**
      * @throws GuzzleException
      */
-    public function chat(Request $request)
+    public function send(Request $request)
     {
         $apiKey = config('services.openai.api_key');
         $userMessage = $request->input('message');

@@ -8,6 +8,13 @@
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen">
 
+<form method="POST" action="{{ route('logout') }}">
+    @csrf
+    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+        Выйти
+    </button>
+</form>
+
 <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
     <h1 class="text-2xl font-semibold text-center dark:text-white">ChatGPT на Laravel</h1>
 

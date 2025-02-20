@@ -23,7 +23,7 @@ class ChatController extends Controller
     {
         $request->validate(['message' => 'required']);
 
-        $userMessage = Message::create([
+        Message::create([
             'user_id' => Auth::id(),
             'message' => $request->message,
             'is_bot' => false,

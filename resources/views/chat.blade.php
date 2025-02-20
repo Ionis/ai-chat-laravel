@@ -18,7 +18,21 @@
 <div class="w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
     <h1 class="text-2xl font-semibold text-center dark:text-white">ChatGPT на Laravel</h1>
 
-    <div id="messages" class="h-96 overflow-y-auto border rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-700"></div>
+    <div id="messages" class="h-96 overflow-y-auto border rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-700">
+        @foreach($messages as $msg)
+            <div class="flex {{ $msg->is_bot ? 'justify-start' : 'justify-end' }} items-center space-x-2">
+                @if($msg->is_bot)
+                    <img src="{{ asset('/images/bot-avatar.png') }}" class="w-8 h-8 rounded-full">
+                    <span class="bg-gray-200 dark:bg-gray-600 text-black dark:text-white p-2 rounded-lg max-w-xs">
+                    {{ $msg->message }}
+                </span>
+                @else
+                    <span class="bg-blue-500 text-white p-2 rounded-lg max-w-xs">{{ $msg->message }}</span>
+                    <img src="{{ asset('/images/user-avatar.jpg') }}" class="w-8 h-8 rounded-full">
+                @endif
+            </div>
+        @endforeach
+    </div>
 
     <form id="chatForm" class="mt-4 flex">
         <input type="text" id="userInput" name="message" placeholder="Введите сообщение..."

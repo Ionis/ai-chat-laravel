@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Message;
 use Illuminate\Http\Request;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
     public function index()
     {
-        return view('chat');
+        $messages = Message::where('user_id', Auth::id())->get();
+        return view('chat', compact('messages'));
     }
 
     /**
@@ -18,6 +21,14 @@ class ChatController extends Controller
      */
     public function send(Request $request)
     {
+        $request->validate(['message' => 'required']);
+
+        $userMessage = Message::create([
+            'user_id' => Auth::id(),
+            'message' => $request->message,
+            'is_bot' => false,
+        ]);
+
         $apiKey = config('services.openai.api_key');
         $userMessage = $request->input('message');
 
@@ -39,6 +50,14 @@ class ChatController extends Controller
         ]);
 
         $data = json_decode($response->getBody(), true);
-        return response()->json(['reply' => $data['choices'][0]['message']['content']]);
+        $botReply = $data['choices'][0]['message']['content'];
+
+        $botMessage = Message::create([
+            'user_id' => Auth::id(),
+            'message' => $botReply,
+            'is_bot' => true,
+        ]);
+
+        return response()->json(['reply' => $botMessage->message]);
     }
 }

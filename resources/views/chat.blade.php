@@ -39,10 +39,13 @@
     </div>
 
     <!-- Боковая панель -->
-    <aside class="w-64 bg-gray-200 dark:bg-gray-700 p-6 flex flex-col hidden md:flex">
-        <button class="mb-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-            Выйти
-        </button>
+    <aside class="w-64 bg-gray-200 dark:bg-gray-700 p-6 flex flex-col md:flex">
+        <form method="POST" action="{{ route('logout') }}" class="flex flex-col">
+            @csrf
+            <button class="mb-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+                Выйти
+            </button>
+        </form>
 
         <h2 class="text-lg font-semibold dark:text-white">Меню</h2>
         <ul class="mt-2 space-y-2">

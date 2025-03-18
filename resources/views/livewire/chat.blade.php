@@ -6,7 +6,7 @@
             <div class="flex {{ $msg['is_bot'] ? 'justify-start' : 'justify-end' }} items-center space-x-2">
                 @if($msg['is_bot'])
                     <img src="{{ asset('/images/bot-avatar.png') }}" class="w-8 h-8 rounded-full">
-                    <span class="bg-gray-200 dark:bg-gray-600 text-black dark:text-white p-2 rounded-lg max-w-xs">
+                    <span class="bg-gray-200 dark:bg-gray-600 text-black dark:text-white p-2 rounded-lg">
                         {{ $msg['message'] }}
                     </span>
                 @else

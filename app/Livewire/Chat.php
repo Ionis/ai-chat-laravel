@@ -51,7 +51,7 @@ class Chat extends Component
             'Authorization' => "Bearer $apiKey",
             'Content-Type' => 'application/json',
         ])
-            ->withOptions(['proxy' => $proxyUrl])
+            ->withOptions(['proxy' => $proxyUrl, 'stream' => true])
             ->timeout(60)
             ->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4',

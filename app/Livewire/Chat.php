@@ -2,95 +2,126 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use App\Models\Message;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
+use Livewire\Component;
 
 class Chat extends Component
 {
     public $chatHistory;
-    public $userInput = '';
-    public $streamingReply = '';
+    public $prompt = '';
+    public $answer = '';
+    public $question = '';
+    public $messages = [];
 
     public function mount(): void
     {
-        $this->chatHistory = Message::where('user_id', Auth::id())->get();
+        // Загружаем историю из базы данных
+        $this->messages = Message::where('user_id', Auth::id())
+            ->get()
+            ->map(function($msg) {
+                return [
+                    'id' => uniqid(),
+                    'question' => $msg->question,
+                    'answer' => $msg->answer
+                ];
+            })
+            ->toArray();
     }
 
-    public function sendMessage(): void
+    function submitPrompt(): void
     {
-        if (!$this->userInput) return;
+        $this->question = $this->prompt;
 
-        $this->validate(['userInput' => 'required']);
+        $this->messages[] = [
+            'id' => uniqid(),
+            'question' => $this->question,
+            'answer' => ''
+        ];
 
-        // Добавляем сообщение пользователя в БД
-        Message::create([
-            'user_id' => Auth::id(),
-            'message' => $this->userInput,
-            'is_bot' => false,
+        $this->prompt = '';
+        $this->answer = '';
+
+        $this->dispatch('messageAdded');
+        $this->js('$wire.ask()');
+    }
+
+    function ask(): void
+    {
+        $client = new Client([
+            'base_uri' => 'https://api.openai.com/v1/',
+            'headers' => [
+                'Authorization' => 'Bearer ' . config('openai.api_key'),
+                'Content-Type' => 'application/json',
+            ],
+            'proxy' => config('openai.proxy_url'),
         ]);
 
-        // Обновляем список сообщений в интерфейсе
-        $this->chatHistory = Message::where('user_id', Auth::id())->get();
-
-        // Отправляем запрос к OpenAI API через поток
-        $this->streamingReply = '';
-        $this->streamResponse($this->userInput);
-
-        // Очищаем поле ввода
-        $this->userInput = '';
-    }
-
-    public function streamResponse($userMessage): void
-    {
-        $apiKey = config('services.openai.api_key');
-        $proxyUrl = config('services.openai.proxy_url');
-
-        $response = Http::withHeaders([
-            'Authorization' => "Bearer $apiKey",
-            'Content-Type' => 'application/json',
-        ])
-            ->withOptions(['proxy' => $proxyUrl, 'stream' => true])
-            ->timeout(60)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4',
-                'messages' => [['role' => 'user', 'content' => $userMessage]],
-                'stream' => true, // Включаем потоковую передачу
+        try {
+            $response = $client->post('chat/completions', [
+                'json' => [
+                    'model' => 'gpt-3.5-turbo',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $this->question],
+                    ],
+                    'stream' => true,
+                ],
+                'stream' => true,
             ]);
 
-        // Читаем поток
-        foreach (explode("\n", $response->body()) as $chunk) {
-            $chunk = trim($chunk);
+            $body = $response->getBody();
+            $buffer = '';
+            $lastMessageId = $this->messages[count($this->messages) - 1]['id'];
+            $fullAnswer = '';
 
-            // Игнорируем пустые строки и строки с "data: [DONE]"
-            if (empty($chunk) || $chunk === 'data: [DONE]') {
-                continue;
+            while (!$body->eof()) {
+                $buffer .= $body->read(1024);
+
+                while (($newlinePos = strpos($buffer, "\n")) !== false) {
+                    $line = substr($buffer, 0, $newlinePos);
+                    $buffer = substr($buffer, $newlinePos + 1);
+
+                    $line = trim($line);
+                    if (str_starts_with($line, 'data: ')) {
+                        $json = substr($line, 6);
+                        if ($json === '[DONE]') break 2;
+
+                        $payload = json_decode($json, true);
+                        if (isset($payload['choices'][0]['delta']['content'])) {
+                            $chunk = $payload['choices'][0]['delta']['content'];
+                            $this->stream(to: "answer_{$lastMessageId}", content: $chunk);
+                            $this->messages[count($this->messages) - 1]['answer'] .= $chunk;
+                            $fullAnswer .= $chunk;
+                            $this->dispatch('answerUpdated');
+                        }
+                    }
+                }
             }
 
-            // Убираем "data: " и декодируем JSON
-            if (str_starts_with($chunk, 'data: ')) {
-                $json = substr($chunk, 6);
-            } else {
-                $json = $chunk;
-            }
+            // Сохраняем полный ответ в базу данных
+            Message::create([
+                'user_id' => Auth::id(),
+                'question' => $this->question,
+                'answer' => $fullAnswer,
+            ]);
 
-            $data = json_decode($json, true);
-
-            if (isset($data['choices'][0]['delta']['content'])) {
-                $this->streamingReply .= $data['choices'][0]['delta']['content'];
-            }
+        } catch (RequestException $e) {
+            $error = 'Ошибка: ' . $e->getMessage();
+            $this->answer = $error;
+            $this->messages[count($this->messages) - 1]['answer'] = $error;
+            $this->dispatch('answerUpdated');
         }
+    }
 
-        // Сохраняем полный ответ в базу
-        Message::create([
-            'user_id' => Auth::id(),
-            'message' => $this->streamingReply,
-            'is_bot' => true,
-        ]);
+    public function clearChat(): void
+    {
+        // Очищаем историю в браузере
+        $this->messages = [];
 
-        // Обновляем список сообщений
-        $this->chatHistory = Message::where('user_id', Auth::id())->get();
+        // Очищаем историю в базе данных
+        Message::where('user_id', Auth::id())->delete();
     }
 
     public function render()

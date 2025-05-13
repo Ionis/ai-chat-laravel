@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Message extends Model
 {
-    protected $fillable = ['user_id', 'message', 'is_bot'];
+    protected $fillable = ['user_id', 'question', 'answer'];
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

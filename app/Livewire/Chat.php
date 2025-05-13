@@ -10,7 +10,6 @@ use Livewire\Component;
 
 class Chat extends Component
 {
-    public $chatHistory;
     public $prompt = '';
     public $answer = '';
     public $question = '';
